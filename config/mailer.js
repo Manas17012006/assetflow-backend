@@ -11,21 +11,57 @@ const transporter = nodemailer.createTransport({
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
   },
+  connectionTimeout: 10000,
+  greetingTimeout: 10000,
+  socketTimeout: 10000,
 });
 
-transporter.verify(function (error, success) {
+transporter.verify((error, success) => {
   if (error) {
-    console.log("SMTP VERIFY ERROR:", error);
+    console.log(
+      "SMTP VERIFY ERROR:",
+      error
+    );
   } else {
-    console.log("SMTP SERVER READY");
+    console.log(
+      "SMTP SERVER READY"
+    );
   }
 });
+
+async function sendMail(options) {
+  try {
+    console.log(
+      "Sending mail to:",
+      options.to
+    );
+
+    const info =
+      await transporter.sendMail(
+        options
+      );
+
+    console.log(
+      "MAIL SENT:",
+      info.messageId
+    );
+
+    return info;
+  } catch (error) {
+    console.log(
+      "MAIL ERROR:",
+      error
+    );
+
+    throw error;
+  }
+}
 
 export const sendOtpEmail = async (
   email,
   otp
 ) => {
-  await transporter.sendMail({
+  return sendMail({
     from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
     to: email,
     subject:
@@ -33,17 +69,9 @@ export const sendOtpEmail = async (
     html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
         <h2>AssetFlow Email Verification</h2>
-
         <p>Your verification OTP is:</p>
-
-        <h1 style="letter-spacing: 4px;">
-          ${otp}
-        </h1>
-
-        <p>
-          This OTP will expire in
-          10 minutes.
-        </p>
+        <h1 style="letter-spacing: 4px;">${otp}</h1>
+        <p>This OTP will expire in 10 minutes.</p>
       </div>
     `,
   });
@@ -57,33 +85,20 @@ export const sendBookingApprovedEmail =
     endDate,
     adminEmail
   ) => {
-    await transporter.sendMail({
+    return sendMail({
       from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
       to: email,
       subject:
         "Booking Approved - AssetFlow",
-
       html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
-      
-        <h2>
-          Your booking request has been approved.
-        </h2>
+        <h2>Your booking request has been approved.</h2>
 
-        <p>
-          <strong>Asset:</strong>
-          ${assetName}
-        </p>
+        <p><strong>Asset:</strong> ${assetName}</p>
 
-        <p>
-          <strong>Collection Location:</strong>
-          ${location}
-        </p>
+        <p><strong>Collection Location:</strong> ${location}</p>
 
-        <p>
-          <strong>Admin Contact:</strong>
-          ${adminEmail}
-        </p>
+        <p><strong>Admin Contact:</strong> ${adminEmail}</p>
 
         <p>
           <strong>Return Before:</strong>
@@ -94,23 +109,17 @@ export const sendBookingApprovedEmail =
 
         <hr>
 
+        <p>Please collect the asset from the mentioned location.</p>
+
         <p>
-          Please collect the asset from
-          the mentioned location.
+          After collection, kindly email the administrator
+          with a photo of the collected asset.
         </p>
 
         <p>
-          After collection, kindly email
-          the administrator with a photo
-          of the collected asset.
+          Failure to return the asset before the deadline
+          may result in administrative action.
         </p>
-
-        <p>
-          Failure to return the asset
-          before the deadline may result
-          in administrative action.
-        </p>
-
       </div>
       `,
     });
@@ -121,27 +130,18 @@ export const sendBookingRejectedEmail =
     email,
     reason
   ) => {
-    await transporter.sendMail({
+    return sendMail({
       from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
       to: email,
       subject:
         "Booking Request Rejected",
-
       html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Your booking request was rejected.</h2>
 
-        <h2>
-          Your booking request was rejected.
-        </h2>
+        <p><strong>Reason:</strong></p>
 
-        <p>
-          <strong>Reason:</strong>
-        </p>
-
-        <p>
-          ${reason}
-        </p>
-
+        <p>${reason}</p>
       </div>
       `,
     });
@@ -155,42 +155,24 @@ export const sendMaintenanceEmail =
     issue,
     severity
   ) => {
-    await transporter.sendMail({
+    return sendMail({
       from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
       to: adminEmail,
       subject:
         "New Maintenance Report",
-
       html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Maintenance Report Submitted</h2>
 
-        <h2>
-          Maintenance Report Submitted
-        </h2>
+        <p><strong>Asset:</strong> ${assetName}</p>
 
-        <p>
-          <strong>Asset:</strong>
-          ${assetName}
-        </p>
+        <p><strong>Reported By:</strong> ${reporterName}</p>
 
-        <p>
-          <strong>Reported By:</strong>
-          ${reporterName}
-        </p>
+        <p><strong>Severity:</strong> ${severity}</p>
 
-        <p>
-          <strong>Severity:</strong>
-          ${severity}
-        </p>
+        <p><strong>Issue:</strong></p>
 
-        <p>
-          <strong>Issue:</strong>
-        </p>
-
-        <p>
-          ${issue}
-        </p>
-
+        <p>${issue}</p>
       </div>
       `,
     });
@@ -202,29 +184,18 @@ export const sendAssetReturnedEmail =
     assetName,
     userName
   ) => {
-    await transporter.sendMail({
+    return sendMail({
       from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
       to: adminEmail,
       subject:
         "Asset Returned",
-
       html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h2>Asset Returned</h2>
 
-        <h2>
-          Asset Returned
-        </h2>
+        <p><strong>Asset:</strong> ${assetName}</p>
 
-        <p>
-          <strong>Asset:</strong>
-          ${assetName}
-        </p>
-
-        <p>
-          <strong>Returned By:</strong>
-          ${userName}
-        </p>
-
+        <p><strong>Returned By:</strong> ${userName}</p>
       </div>
       `,
     });
@@ -235,32 +206,24 @@ export const sendMaintenanceResolvedEmail =
     email,
     assetName
   ) => {
-    await transporter.sendMail({
+    return sendMail({
       from: `"AssetFlow" <${process.env.MAIL_FROM}>`,
       to: email,
       subject:
         "Maintenance Report Resolved",
-
       html: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
-
-        <h2>
-          Maintenance Issue Resolved
-        </h2>
+        <h2>Maintenance Issue Resolved</h2>
 
         <p>
           The maintenance report for
-          <strong>
-            ${assetName}
-          </strong>
+          <strong>${assetName}</strong>
           has been resolved.
         </p>
 
         <p>
-          Thank you for helping us
-          maintain the inventory.
+          Thank you for helping us maintain the inventory.
         </p>
-
       </div>
       `,
     });
